@@ -1,0 +1,449 @@
+---
+title: "ggplot2 extensions are easy -- right??"
+author: "Heike Hofmann"
+date: "2024-12-04"
+institute: "University of Nebraska-Lincoln"
+theme: UNLTheme
+format: beamer
+themeoptions:
+  - left
+---
+
+## Outline^[Thanks to [Chris Bourke](https://chrisbourke.unl.edu/) for making the [UNL Beamer Theme](https://github.com/cbourke/beamer-unl)]
+
+-   Quick review of the ggplot2 layering system
+
+-   Examples
+
+-   More examples
+
+
+
+```{r}
+library(tidyverse)
+knitr::opts_chunk$set(fig.width=4.5, fig.height = 4.5, fig.align='center', out.width = '42.5%', echo=TRUE)
+
+library(sf)
+usa <- st_as_sf(maps::map("state", fill=TRUE, plot =FALSE))
+wa <- st_as_sf(maps::map("county", regions = "washington", fill=TRUE, plot =FALSE))
+```
+
+## `ggplot2` is ...
+
+-   pretty wildly used (more than 1 million downloads each month)
+
+-   based on the Grammar of Graphics, i.e conceptually sound
+
+-   supports a layering system
+
+-   very flexible with (relatively) good defaults
+
+References:
+
+-   Hadley Wickham's book: [ggplot2: Elegant Graphics for Data Analysis (3e)](https://ggplot2-book.org/)
+-   Winston Chang's book: [R Graphics Cookbook (2e)](https://r-graphics.org/)
+-   ggplot2 [online documentation](https://ggplot2.tidyverse.org/articles/ggplot2.html)
+
+## Components of a ggplot2 chart: data is number 0
+
+1.  **mappings** (`aes`): data variables are mapped to graphical elements
+
+2.  **layers**: geometric elements (`geoms`, such as points, lines, rectangles, text, ...) and statistical transformations (`stats`, are identity, counts, bins, ...)
+
+3.  **scales**: map values in the data space to values in an aesthetic space (e.g. color, size, shape, but also position)
+
+4.  **coordinate system** (`coord`): defaults to Cartesian, but pie charts use e.g. polar coordinates
+
+5.  **facetting**: for small multiples (subsets) and their arrangement
+
+6.  **theme**: defaults to `theme_grey` fine-tune display items, such as font and its size, color of background, margins, ...
+
+## Defaults!
+
+Usually only need `data`, mapping with `aes` and one `geom`:
+
+```{r echo=TRUE}
+#| output-location: slide 
+orcas <- tidytuesdayR::tt_load(2024, week = 42)$orcas
+
+orcas %>% #<< data
+  ggplot(aes(x = begin_longitude, y = begin_latitude)) + 
+  geom_point()
+```
+
+## Layering
+
+```{r}
+ggplot(usa) +
+  geom_sf(color = "#2b2b2b", fill = "white", size=0.125) + 
+  geom_point(
+    aes(x = begin_longitude, y = begin_latitude), 
+    data = orcas)
+```
+
+## Layering
+
+```{r}
+ggplot(wa) +
+  geom_sf(color = "#2b2b2b", fill = "white", size=0.125) + 
+  geom_point(
+    aes(x = begin_longitude, y = begin_latitude), 
+    data = orcas)
+```
+
+## A first extension
+
+from ggplot2 vignette [on extensions](https://cran.r-project.org/web/packages/ggplot2/vignettes/extending-ggplot2.html)
+
+Making a convex hull: Object definition
+
+```{r}
+StatChull <- ggproto(
+  "StatChull", Stat,
+  required_aes = c("x", "y"),
+  
+  compute_group = function(data, scales) {
+     data[chull(data$x, data$y), , drop = FALSE]
+  }
+)
+```
+
+## Each object needs to be made
+
+```{r}
+stat_chull <- function(
+    mapping = NULL, data = NULL, geom = "polygon",
+    position = "identity", na.rm = FALSE,
+    show.legend = NA,  inherit.aes = TRUE, ...) {
+  
+  layer(
+    stat = StatChull, data = data, mapping = mapping, geom = geom, 
+    position = position, show.legend = show.legend, 
+    inherit.aes = inherit.aes, params = list(na.rm = na.rm, ...)
+  )
+}
+```
+
+## Now use it
+
+```{r}
+orcas %>% 
+  ggplot(aes(x = begin_longitude, y = begin_latitude)) +
+  geom_point() + 
+  stat_chull(fill=NA, colour = "black") + theme_bw()
+```
+
+## A Stat? That wasn't on the list!
+
+Every `geom` has a (default) `stat`
+
+```{r}
+geom_point
+```
+
+## The Stat and its Geom produce the same layer
+
+```{r}
+geom_point()
+```
+
+```{r}
+stat_identity()
+```
+
+Each function provides access to a different aspect in the layer: `geom`s control the look, `stat`s control the data aspects
+
+## We can use `stat_identity` instead of `geom_point`
+
+```{r}
+orcas %>% 
+  ggplot(aes(x = begin_longitude, y = begin_latitude)) +
+  stat_identity()
+```
+
+## Object-oriented foundation
+
+Every extension starts at the `geom`/`stat` level
+
+`ggplot2` is expecting a `Geom` and a `Stat` specification for every layer
+
+But: you don't need to (and can not) start from scratch
+
+Two prototype objects: `ggplot2::Geom` and `ggplot2::Stat`
+
+## The `Geom` Object
+
+```{r echo=FALSE}
+Geom
+```
+
+## The `Stat` Object
+
+```{r echo=FALSE}
+Stat
+```
+
+## Useful (?) Strategy
+
+Rely on the defaults: pick the Geom/Stat that is closest to what you want to do, and expand
+
+Make minimal changes otherwise
+
+## A look back
+
+Specifies required mappings, and `compute_group`
+
+```{r }
+StatChull <- ggproto(
+  "StatChull", Stat,
+  required_aes = c("x", "y"),
+  
+  compute_group = function(data, scales) {
+     data[chull(data$x, data$y), , drop = FALSE]
+  }
+)
+```
+
+## Linking between `StatChull` and `polygon`
+
+```{r}
+stat_chull <- function(
+    mapping = NULL, data = NULL, geom = "polygon",
+    position = "identity", na.rm = FALSE,
+    show.legend = NA,  inherit.aes = TRUE, ...) {
+  
+  layer(
+    stat = StatChull, data = data, mapping = mapping, geom = geom, 
+    position = position, show.legend = show.legend, 
+    inherit.aes = inherit.aes, params = list(na.rm = na.rm, ...)
+  )
+}
+```
+
+## What do you need to change when ...
+
+you want to ...
+
+-   put on branding on charts? the theme
+-   automatically combine several layers? the geom
+-   implement a new type of chart? everything
+
+## Making a new theme
+
+```{r}
+theme_slides <- theme_bw(base_size = 24)
+orcas %>% 
+  ggplot(aes(x = begin_longitude, y = begin_latitude)) +
+  stat_identity() + theme_slides
+```
+
+## Wrapping multiple layers into one
+
+```{r}
+orcas %>% 
+  ggplot(aes(x = begin_longitude, y = begin_latitude)) +
+  stat_chull(fill="grey60", colour = "grey30", alpha = 0.8) + 
+  geom_point() 
+```
+
+## Wrapper for defaults
+
+Define defaults
+
+```{r}
+GeomChull <- ggproto(
+  "GeomChull", GeomPolygon,
+  default_aes = ggplot2::aes(
+    colour = "grey30", fill = "grey50", alpha = 0.5, # new ones
+    linewidth=0.5, linetype = 1, subgroup=NULL
+    )
+)
+```
+
+## Basis is `geom_polygon`
+
+Change `stat` to chull, and `GeomPolygon` to `GeomChull`.
+
+Everything else stays the same
+
+```{r}
+geom_chull <- function (mapping = NULL, data = NULL, 
+                        stat = "chull", position = "identity", 
+    rule = "evenodd", ..., na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) 
+{
+    layer(data = data, mapping = mapping, stat = stat, 
+          geom = GeomChull, position = position, 
+          show.legend = show.legend, inherit.aes = inherit.aes, 
+        params = list(na.rm = na.rm, rule = rule, ...))
+}
+```
+
+## Previous example
+
+```{r}
+orcas %>% 
+  ggplot(aes(x = begin_longitude, y = begin_latitude)) +
+#  stat_chull(fill="grey60", colour = "grey30", alpha = 0.8) + 
+  geom_chull() + 
+  geom_point() 
+```
+
+## Show edge points with the frame ... prepping
+
+```{r}
+GeomChull <- ggproto(
+  "GeomChull", GeomPolygon,
+  default_aes = ggplot2::aes(
+    colour = "grey30", fill = "grey50", alpha = 0.5, # new ones
+    linewidth=0.5, linetype = 1, subgroup=NULL,
+    size = 3, shape = 19, stroke = 0.5  # for the points
+    ),
+  
+  draw_panel = function(..., self = self) {
+    GeomPolygon$draw_panel(..., self)
+  }
+)
+```
+
+## Nothing has changed yet
+
+```{r}
+orcas %>% 
+  ggplot(aes(x = begin_longitude, y = begin_latitude)) +
+#  stat_chull(fill="grey60", colour = "grey30", alpha = 0.8) + 
+  geom_chull() + 
+  geom_point() 
+```
+
+## Show edge points with the frame 
+
+```{r}
+GeomChull <- ggproto(
+  "GeomChull", GeomPolygon,
+  default_aes = ggplot2::aes(
+    colour = "grey30", fill = "grey50", alpha = 0.5, # new ones
+    linewidth=0.5, linetype = 1, 
+    size = 3, shape = 19, stroke = 0.5  # for the points
+    ),
+  
+  draw_panel = function(..., self = self) {
+    # using the two layers together
+    grid::grobTree(
+      GeomPolygon$draw_panel(..., self),
+      GeomPoint$draw_panel(..., self)
+    )
+  }
+)
+```
+
+## 
+
+```{r}
+orcas %>% 
+  ggplot(aes(x = begin_longitude, y = begin_latitude)) +
+  geom_chull() + 
+  geom_point() 
+```
+
+## Freebies: Facetting 
+
+
+```{r}
+orcas %>% 
+  ggplot(aes(x = begin_longitude, y = begin_latitude)) +
+  geom_chull() + 
+  geom_point() +
+  facet_wrap(~month(date))
+```
+
+## Supposed Freebie: Color/groups
+
+
+```{r}
+orcas %>% 
+  ggplot(aes(x = begin_longitude, y = begin_latitude, 
+             colour = year)) +
+  geom_chull() + 
+  geom_point() 
+```
+
+Why does this not draw separate convex hulls for each group?
+
+## Specify the group explicitly!
+
+```{r}
+orcas %>% 
+  ggplot(aes(x = begin_longitude, y = begin_latitude, 
+             colour = year, group = year)) +
+  geom_chull() + 
+  geom_point() 
+```
+
+
+## Changing everything: the `lvplot` package
+
+Making a new chart: letter value (box)plots are a suggestion by JW Tukey in Exploratory Data Analysis (~1980)
+
+Instead of just doing a box for Quartiles, the next set of $2^{-k}$ quantiles are included (called the **F**ourth, the **E**ighths, D, C, B, A, Z, ...)
+
+```{r}
+library(lvplot)
+```
+
+Implements pairs `geom_lv`, `GeomLv`, and `stat_lv`, `StatLv`
+
+```{r}
+ggplot(ontime, aes(UniqueCarrier, TaxiIn + TaxiOut)) +
+    geom_lv(aes(fill = after_stat(LV)), varwidth=TRUE) +
+    scale_fill_lv() +
+    theme_bw()
+```
+## Another new graphic: Mosaicplots
+
+```{r echo= FALSE}
+library(ggmosaic)
+ggplot(data = titanic) +
+  geom_mosaic(aes(x = Class, fill = Survived)) + 
+  ggtitle("People on Board of HMS Titanic")
+```
+Besides implementing a geom and a stat - what else is needed?
+
+## Parallel Coordinate Plots
+
+```{r echo= FALSE, fig.width=8, fig.height=3.5, out.width='90%'}
+library(ggpcp)
+data(mtcars)
+mtcars_pcp <- mtcars |>
+  dplyr::mutate(
+    cyl = factor(cyl),
+    vs = factor(vs),
+    am = factor(am),
+    gear = factor(gear),
+    carb = factor(carb)
+  ) |>
+  pcp_select(1:11) |>  # select everything
+  pcp_scale() |>
+  pcp_arrange()
+
+ base <- mtcars_pcp |> ggplot(aes_pcp())
+ base +
+  geom_pcp(aes(colour = cyl)) +
+  geom_pcp_boxes() +
+  geom_pcp_labels() +
+  theme_pcp()
+```
+
+How about this one?
+
+## Where to go from here ...
+
+Look at more code!
+
+Listing of 'official' extension packages: [https://exts.ggplot2.tidyverse.org/gallery/]()
+
+ggrepel package: [https://github.com/slowkow/ggrepel]()
+
+ggpcp package: [https://heike.github.io/ggpcp/]()
+
+
+

@@ -1,0 +1,40 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# NebRUG 2024
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+Sign up for the Nebraska R User Group on [meetup](https://www.meetup.com/neb-rug/?eventOrigin=event_home_page).
+
+## Our Events
+
+```{r}
+library(calendR)
+library(lubridate)
+
+meetups <- yday(mdy(c("10-29-2024")))
+talks <- yday(mdy(c("12-04-2024")))
+
+events <- c(meetups, talks)
+color <- c(rep("goldenrod", length(meetups)), rep("salmon", length(talks)))
+
+
+calendR(year = "2024",
+        month = c(10:12),
+        special.days = events,
+        special.col = color,            # Color of the specified days
+        low.col = "white") 
+
+```
