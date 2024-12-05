@@ -20,21 +20,13 @@ Sign up for the Nebraska R User Group on [meetup](https://www.meetup.com/neb-rug
 
 ## Our Events
 
-```{r}
-library(calendR)
-library(lubridate)
+```{r warning = FALSE, echo=FALSE, message=FALSE}
+source("schedule.R")
+class_cal
+```
 
-meetups <- yday(mdy(c("10-29-2024")))
-talks <- yday(mdy(c("12-04-2024")))
-
-events <- c(meetups, talks)
-color <- c(rep("goldenrod", length(meetups)), rep("salmon", length(talks)))
-
-
-calendR(year = "2024",
-        month = c(10:12),
-        special.days = events,
-        special.col = color,            # Color of the specified days
-        low.col = "white") 
-
+```{r echo=FALSE}
+Cal %>% filter(category!="NA") %>% select(-semester, -day, -week) %>%
+  mutate(title = c("", "Extensions to ggplot2"),
+         link = c("", "[pdf](2024-12-04-ggplot2-extensions/ggplot2-extensions.pdf) [html](2024-12-04-ggplot2-extensions/ggplot2-extensions.html)")) %>% knitr::kable()
 ```

@@ -7,19 +7,14 @@
 
 <!-- badges: end -->
 
-Sign up to the Nebraska R User Group on
+Sign up for the Nebraska R User Group on
 [meetup](https://www.meetup.com/neb-rug/?eventOrigin=event_home_page).
 
-``` r
-library(calendR)
-#> ~~ Package calendR
-#> Visit https://r-coder.com/ for R tutorials ~~
-calendR(year = 2024,
-        start = "M",
-        special.days = c(9, 19, 56, 79, 102,  # Days to color
-                         126, 257, 300, 342),
-        special.col = "lightblue",            # Color of the specified days
-        low.col = "white") # Start the week on Monday
-```
+## Our Events
 
 ![](README_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+
+| date | mon | wkdy | category | title | link |
+|:---|:---|:---|:---|:---|:---|
+| 2024-10-29 | October | Tue | Meetup |  |  |
+| 2024-12-04 | December | Wed | Talk | Extensions to ggplot2 | [pdf](2024-12-04-ggplot2-extensions/ggplot2-extensions.pdf) [html](2024-12-04-ggplot2-extensions/ggplot2-extensions.html) |
