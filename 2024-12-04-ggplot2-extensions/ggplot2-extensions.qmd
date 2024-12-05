@@ -3,13 +3,16 @@ title: "ggplot2 extensions are easy -- right??"
 author: "Heike Hofmann"
 date: "2024-12-04"
 institute: "University of Nebraska-Lincoln"
-theme: UNLTheme
-format: beamer
-themeoptions:
-  - left
+
+format: 
+  revealjs: default
+  beamer:
+    theme: UNLTheme
+    themeoptions:
+      - left
 ---
 
-## Outline^[Thanks to [Chris Bourke](https://chrisbourke.unl.edu/) for making the [UNL Beamer Theme](https://github.com/cbourke/beamer-unl)]
+## Outline^[Thanks to [Chris Bourke](https://chrisbourke.unl.edu/) for making the [UNL Beamer Theme](https://github.com/cbourke/beamer-unl) for the pdf]
 
 -   Quick review of the ggplot2 layering system
 
